@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html class="h-full">
+<head>
+<title>KrishiX AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-green-400 to-blue-500 min-h-screen py-12 px-4">
+<div class="max-w-2xl mx-auto bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 md:p-12">
+<h1 class="text-4xl md:text-5xl font-bold text-center bg-gradient-to-r from-green-600 to-emerald-700 bg-clip-text text-transparent mb-12"><i class="fas fa-seedling mr-4"></i>KrishiX AI</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+<button onclick="setPreset('rice')" class="preset-btn bg-gradient-to-r from-orange-500 to-red-500 p-4 rounded-2xl text-white font-bold hover:scale-105 transition-all shadow-lg">Rice <i class="fas fa-arrow-right ml-2"></i></button>
+<button onclick="setPreset('wheat')" class="preset-btn bg-gradient-to-r from-yellow-500 to-orange-500 p-4 rounded-2xl text-white font-bold hover:scale-105 transition-all shadow-lg">Wheat <i class="fas fa-arrow-right ml-2"></i></button>
+<button onclick="setPreset('maize')" class="preset-btn bg-gradient-to-r from-blue-500 to-indigo-500 p-4 rounded-2xl text-white font-bold hover:scale-105 transition-all shadow-lg">Maize <i class="fas fa-arrow-right ml-2"></i></button>
+<button onclick="setPreset('random')" class="preset-btn bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-2xl text-white font-bold hover:scale-105 transition-all shadow-lg">Random <i class="fas fa-dice ml-2"></i></button>
+</div>
+
+<form id="form" class="space-y-4 mb-12">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<input name="N" type="range" min="0" max="150" value="90" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500" oninput="updateValue(this,'N')">
+<span id="N-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">N: 90</span>
+
+<input name="P" type="range" min="0" max="150" value="60" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500" oninput="updateValue(this,'P')">
+<span id="P-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">P: 60</span>
+
+<input name="K" type="range" min="0" max="200" value="80" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateValue(this,'K')">
+<span id="K-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">K: 80</span>
+
+<input name="temperature" type="range" min="10" max="45" value="28" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" oninput="updateValue(this,'temperature')">
+<span id="temp-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">Temp: 28°C</span>
+
+<input name="humidity" type="range" min="20" max="100" value="70" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500" oninput="updateValue(this,'humidity')">
+<span id="hum-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">Humidity: 70%</span>
+
+<input name="ph" type="range" min="3" max="10" step="0.1" value="6.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-yellow-500" oninput="updateValue(this,'ph')">
+<span id="ph-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">pH: 6.5</span>
+
+<input name="rainfall" type="range" min="20" max="300" value="140" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-500" oninput="updateValue(this,'rainfall')">
+<span id="rain-val" class="block text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">Rain: 140mm</span>
+</div>
+<button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-6 px-8 rounded-2xl font-bold text-xl hover:from-emerald-600 hover:to-green-700 transform hover:scale-[1.02] transition-all shadow-xl"><i class="fas fa-brain mr-3"></i>AI Predict <i class="fas fa-rocket ml-3"></i></button>
+</form>
+
+<div id="result" class="hidden space-y-6 animate-in fade-in duration-500">
+<div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-8 rounded-2xl shadow-2xl text-center">
+<i class="fas fa-trophy text-6xl mb-6 opacity-90"></i>
+<h2 class="text-4xl font-black mb-4" id="crop"></h2>
+<div class="text-2xl opacity-90 mb-2">Confidence: <span id="conf" class="font-black text-3xl"></span></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
+<div class="text-center"><i class="fas fa-chart-line text-2xl text-blue-600 mb-2"></i><span id="conds"></span></div>
+</div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api/crop/recommend';
+let isLoading = false;
+
+function updateValue(range, name) {
+  document.getElementById(name+'-val').textContent = `${name.toUpperCase()}: ${range.value}${name==='temperature'?'°C':name==='ph'?'':name==='rainfall'||name==='humidity'?'%':''}`;
+}
+
+function setPreset(type) {
+  const presets = {
+    rice: {N:120,P:80,K:100,t:30,h:85,ph:6.0,rain:200},
+    wheat: {N:90,P:60,K:80,t:22,h:65,ph:6.5,rain:90},
+    maize: {N:100,P:70,K:90,t:28,h:70,ph:6.2,rain:140},
+    random: Object.fromEntries(['N','P','K','temperature','humidity','ph','rainfall'].map(k => [k, Math.floor(Math.random()*100)+20]))
+  };
+  const data = presets[type];
+  Object.entries(data).forEach(([k,v]) => {
+    document.querySelector(`[name="${k}"]`).value = v;
+    updateValue({value:v}, k);
+  });
+}
+
+document.getElementById('form').onsubmit = async e => {
+  e.preventDefault();
+  if (isLoading) return;
+  
+  const formData = Object.fromEntries(new FormData(e.target));
+  const btn = document.getElementById('submit-btn');
+  isLoading = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>Predicting...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(formData)
+    });
+    const result = await res.json();
+    
+    if (result.crop) {
+      document.getElementById('crop').textContent = result.crop.toUpperCase();
+      document.getElementById('conf').textContent = (result.conf*100).toFixed(1) + '%';
+      document.getElementById('conds').innerHTML = Object.entries(formData).map(([k,v]) => `<strong>${k}:</strong> ${v}`).join('<br>');
+      document.getElementById('result').classList.remove('hidden');
+    }
+  } catch(e) {
+    alert('Server error - start: cd backend && python app.py');
+  }
+  
+  btn.innerHTML = '<i class="fas fa-brain mr-3"></i>AI Predict <i class="fas fa-rocket ml-3"></i>';
+  btn.disabled = false;
+  isLoading = false;
+};
+</script>
+</body>
+</html>
+

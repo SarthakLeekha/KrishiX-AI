@@ -1,0 +1,9 @@
+backend/__pycache__/
+*.pyc
+__pycache__/
+*.pkl
+.DS_Store
+.venv/
+env/
+.env
+*.log
