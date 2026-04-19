@@ -1,3 +1,7 @@
+import os
+port = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=port)
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from model_manager import manager
